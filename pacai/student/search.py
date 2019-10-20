@@ -28,9 +28,9 @@ def depthFirstSearch(problem):
     """
 
     # *** Your Code Here ***
-    print("Start: %s" % (str(problem.startingState())))
-    print("Is the start a goal?: %s" % (problem.isGoal(problem.startingState())))
-    print("Start's successors: %s" % (problem.successorStates(problem.startingState())))
+ #   print("Start: %s" % (str(problem.startingState())))
+ #   print("Is the start a goal?: %s" % (problem.isGoal(problem.startingState())))
+ #   print("Start's successors: %s" % (problem.successorStates(problem.startingState())))
 
     search_path = Stack()
     start = problem.startingState()
@@ -39,8 +39,6 @@ def depthFirstSearch(problem):
     r = []
 
     next_state = dfs_recurse(problem, visited, result, start)
-    direct = Actions.vectorToDirection(travel_direction(next_state, start))
-    result.push(direct)
 
     while not (result.isEmpty()):
         r.append(result.pop())
@@ -51,7 +49,7 @@ def depthFirstSearch(problem):
 
 
 def visit_valid(problem, visited, s_stack, node):
-    print("Visiting Node: %s" % (str(node)))
+#    print("Visiting Node: %s" % (str(node)))
     visited.add(node)
     visit_count = 0
 
@@ -69,29 +67,27 @@ def visit_valid(problem, visited, s_stack, node):
 
 # Recursive calls through each element
 def dfs_recurse(problem, visited, directions, node):
-    print("Checking node: %s" % (str(node)))
+#    print("Checking node: %s" % (str(node)))
 
     s_path = Stack()
     visits = visit_valid(problem, visited, s_path, node)
 
-    # If there is no visited subnodes
+    # If there is no visited subnodes, node is dead-end
     if visits == 0:
-        # Current node is goal
-        if problem.isGoal(node):
-            return node
-        # Or current node is dead-end
-        else:
-            return None
+        return None
 
     while not (s_path.isEmpty()):
         to_check = s_path.pop()
+        if (problem.isGoal(to_check[0])):
+            directions.push(to_check[1])
+            return node
 
         next_state = dfs_recurse(problem, visited, directions, to_check[0])
         if next_state:
             # Current state is on the path to goal
             # Store direction of movement
-            directions.push(Actions.vectorToDirection(travel_direction(next_state, to_check[0])))
-            return to_check[0]
+            directions.push(to_check[1])
+            return node
 
     return None
 
