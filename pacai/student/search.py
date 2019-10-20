@@ -2,6 +2,13 @@
 In this file, you will implement generic search algorithms which are called by Pacman agents.
 """
 from pacai.util.stack import Stack
+from pacai.core.actions import Actions
+
+
+def travel_direction(final_pos, init_pos):
+    fx, fy = final_pos
+    ix, iy = init_pos
+    return (fx - ix, fy - iy)
 
 
 def depthFirstSearch(problem):
@@ -27,48 +34,67 @@ def depthFirstSearch(problem):
 
     search_path = Stack()
     start = problem.startingState()
+    visited = set()
+    result = Stack()
+    r = []
 
-    visit_set = set()
-    visit_set.add(start)
+    next_state = dfs_recurse(problem, visited, result, start)
+    direct = Actions.vectorToDirection(travel_direction(next_state, start))
+    result.push(direct)
 
-    nextState = dfs_recurse(problem, visit_set, search_path, start)
+    while not (result.isEmpty()):
+        r.append(result.pop())
+    print("Path: %s" % str(r))
 
-    # Returns list with path to goal, empty if no valid path
-    result = []
-    while not (search_path.isEmpty()):
-        result.append(search_path.pop())
-
-    print("Path: %s" % str(result))
-    return result
+    return r
 
 
-# Recursive calls through each element
-def dfs_recurse(problem, visited, s_path, node):
-    print("Checking node: %s" % (str(node)))
+
+def visit_valid(problem, visited, s_stack, node):
+    print("Visiting Node: %s" % (str(node)))
     visited.add(node)
-    # Check if goal has been reached
-    if problem.isGoal(node):
-        return node
+    visit_count = 0
 
     successor_states = problem.successorStates(node)
     for s in successor_states:
-        print("Checking node: %s" % (str(visited)))
-
-        # check if successive state has been visited
         if s[0] in visited:
             continue
+        s_stack.push(s)
+        # Add one for each valid state resulting from this node
+        visit_count += 1
 
-        print("%s not in set" % (str(s[0])))
-        checked_path = dfs_recurse(problem, visited, s_path, s[0])
+    return visit_count
+#    dfs_recurse(problem, visited, result, s_path, node)
 
-        # A path to goal has been found
-        if checked_path:
-            # Add found valid node, add direction of movement
-            s_path.push(s[1])
+
+# Recursive calls through each element
+def dfs_recurse(problem, visited, directions, node):
+    print("Checking node: %s" % (str(node)))
+
+    s_path = Stack()
+    visits = visit_valid(problem, visited, s_path, node)
+
+    # If there is no visited subnodes
+    if visits == 0:
+        # Current node is goal
+        if problem.isGoal(node):
             return node
+        # Or current node is dead-end
+        else:
+            return None
 
-    # There were no paths to goal from this node
+    while not (s_path.isEmpty()):
+        to_check = s_path.pop()
+
+        next_state = dfs_recurse(problem, visited, directions, to_check[0])
+        if next_state:
+            # Current state is on the path to goal
+            # Store direction of movement
+            directions.push(Actions.vectorToDirection(travel_direction(next_state, to_check[0])))
+            return to_check[0]
+
     return None
+
 
 def breadthFirstSearch(problem):
     """
