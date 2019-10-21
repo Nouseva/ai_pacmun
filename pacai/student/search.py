@@ -55,31 +55,29 @@ def visit_valid(problem, visited, s_stack, node):
         visit_count += 1
 
     return visit_count
-#    dfs_recurse(problem, visited, result, s_path, node)
 
 
 # Recursive calls through each element
 def dfs_recurse(problem, visited, directions, node):
-#    print("Checking node: %s" % (str(node)))
 
-    s_path = Stack()
-    visits = visit_valid(problem, visited, s_path, node)
+    to_check = Stack()
+    num_visited = visit_valid(problem, visited, to_check, node)
 
     # If there is no visited subnodes, node is dead-end
-    if visits == 0:
+    if num_visted == 0:
         return None
 
-    while not (s_path.isEmpty()):
-        to_check = s_path.pop()
-        if (problem.isGoal(to_check[0])):
-            directions.push(to_check[1])
+    while not (to_check.isEmpty()):
+        current = to_check.pop()
+        if (problem.isGoal(current[0])):
+            directions.push(current[1])
             return node
 
-        next_state = dfs_recurse(problem, visited, directions, to_check[0])
+        next_state = dfs_recurse(problem, visited, directions, current[0])
         if next_state:
             # Current state is on the path to goal
             # Store direction of movement
-            directions.push(to_check[1])
+            directions.push(current[1])
             return node
 
     return None
@@ -93,6 +91,7 @@ def visit_valid_bfs(problem, visited, parent_map, storage, node):
     for s in successor_states:
         if s[0] in visited:
             continue
+        visited.add(s[0])
         storage.push(s)
         visit_count += 1
 
@@ -121,6 +120,7 @@ def breadthFirstSearch(problem):
 
         if problem.isGoal(current[0]):
             goal = current[0]
+            break
         visit_valid_bfs(problem, visited_set, parent_map, to_check, current[0])
 
     parent = parent_map[goal]
