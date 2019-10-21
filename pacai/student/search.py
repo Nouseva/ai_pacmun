@@ -182,10 +182,60 @@ def uniformCostSearch(problem):
 
     return result
 
+def visit_valid_aStar(problem, visited, parent_map, storage, node, dist, heu):
+    visited.add(node)
+    visit_count = 0
+
+    successor_states = problem.successorStates(node)
+    for s in successor_states:
+        if s[0] in visited:
+            continue
+
+        visited.add(s[0])
+        # Push onto fringe, child and distance to goal
+        # find the estimated distance to goal
+        h = heu(s[0], problem)
+        # actual distance is stored as part of the item
+        storage.push((s, dist + s[2]), dist + h)
+        visit_count += 1
+
+        # keep track of parent of s[0]
+        parent_map[s[0]] = (node, s[1])
+    return visit_count
+
+
 def aStarSearch(problem, heuristic):
     """
     Search the node that has the lowest combined cost and heuristic first.
     """
+    start = problem.startingState()
+    visited_set = set()
+    parent_map = {start: None}
+    directions = Stack()
+    fringe = PriorityQueue()
+    result = []
+    goal = None
+    distance = 0
+
+    visit_valid_aStar(problem, visited_set, parent_map, fringe, start, distance, heuristic)
+
+    while not (fringe.isEmpty()):
+        current, distance = fringe.pop()
+
+        if problem.isGoal(current[0]):
+            goal = current[0]
+            break
+        visit_valid_aStar(problem, visited_set, parent_map, fringe, current[0], distance, heuristic)
+
+    parent = parent_map[goal]
+    while parent:
+        directions.push(parent[1])
+        parent = parent_map[parent[0]]
+
+    while not (directions.isEmpty()):
+        result.append(directions.pop())
+
+    return result
 
     # *** Your Code Here ***
     raise NotImplementedError()
