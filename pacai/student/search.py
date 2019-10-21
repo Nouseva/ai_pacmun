@@ -2,13 +2,7 @@
 In this file, you will implement generic search algorithms which are called by Pacman agents.
 """
 from pacai.util.stack import Stack
-from pacai.core.actions import Actions
-
-
-def travel_direction(final_pos, init_pos):
-    fx, fy = final_pos
-    ix, iy = init_pos
-    return (fx - ix, fy - iy)
+from pacai.util.queue import Queue
 
 
 def depthFirstSearch(problem):
@@ -32,7 +26,6 @@ def depthFirstSearch(problem):
  #   print("Is the start a goal?: %s" % (problem.isGoal(problem.startingState())))
  #   print("Start's successors: %s" % (problem.successorStates(problem.startingState())))
 
-    search_path = Stack()
     start = problem.startingState()
     visited = set()
     result = Stack()
@@ -92,13 +85,55 @@ def dfs_recurse(problem, visited, directions, node):
     return None
 
 
+def visit_valid_bfs(problem, visited, parent_map, storage, node):
+    visited.add(node)
+    visit_count = 0
+
+    successor_states = problem.successorStates(node)
+    for s in successor_states:
+        if s[0] in visited:
+            continue
+        storage.push(s)
+        visit_count += 1
+
+        # keep track of parent of s[0]
+        parent_map[s[0]] = (node, s[1])
+    return visit_count
+
 def breadthFirstSearch(problem):
     """
     Search the shallowest nodes in the search tree first. [p 81]
     """
 
-    # *** Your Code Here ***
-    raise NotImplementedError()
+    start = problem.startingState()
+    visited_set = set()
+    parent_map = {start: None}
+    directions = Stack()
+    to_check = Queue()
+    goal = None
+    result = []
+
+    visit_valid_bfs(problem, visited_set, parent_map, to_check, start)
+
+    # Form the parent tree for all nodes
+    while not(to_check.isEmpty()):
+        current = to_check.pop()
+
+        if problem.isGoal(current[0]):
+            goal = current[0]
+        visit_valid_bfs(problem, visited_set, parent_map, to_check, current[0])
+
+    parent = parent_map[goal]
+    while parent:
+        directions.push(parent[1])
+        parent = parent_map[parent[0]]
+
+    while not (directions.isEmpty()):
+        result.append(directions.pop())
+
+#    print("Path: %s" % (str (result)))
+    return result
+
 
 def uniformCostSearch(problem):
     """
