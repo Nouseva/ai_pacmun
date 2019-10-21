@@ -3,6 +3,7 @@ In this file, you will implement generic search algorithms which are called by P
 """
 from pacai.util.stack import Stack
 from pacai.util.queue import Queue
+from pacai.util.priorityQueue import PriorityQueue
 
 
 def depthFirstSearch(problem):
@@ -22,27 +23,21 @@ def depthFirstSearch(problem):
     """
 
     # *** Your Code Here ***
- #   print("Start: %s" % (str(problem.startingState())))
- #   print("Is the start a goal?: %s" % (problem.isGoal(problem.startingState())))
- #   print("Start's successors: %s" % (problem.successorStates(problem.startingState())))
 
     start = problem.startingState()
     visited = set()
-    result = Stack()
+    directions = Stack()
     r = []
 
-    next_state = dfs_recurse(problem, visited, result, start)
+    dfs_recurse(problem, visited, directions, start)
 
-    while not (result.isEmpty()):
-        r.append(result.pop())
+    while not (directions.isEmpty()):
+        r.append(directions.pop())
     print("Path: %s" % str(r))
 
     return r
 
-
-
-def visit_valid(problem, visited, s_stack, node):
-#    print("Visiting Node: %s" % (str(node)))
+def visit_valid(problem, visited, storage, node):
     visited.add(node)
     visit_count = 0
 
@@ -50,7 +45,7 @@ def visit_valid(problem, visited, s_stack, node):
     for s in successor_states:
         if s[0] in visited:
             continue
-        s_stack.push(s)
+        storage.push(s)
         # Add one for each valid state resulting from this node
         visit_count += 1
 
@@ -60,15 +55,15 @@ def visit_valid(problem, visited, s_stack, node):
 # Recursive calls through each element
 def dfs_recurse(problem, visited, directions, node):
 
-    to_check = Stack()
-    num_visited = visit_valid(problem, visited, to_check, node)
+    fringe = Stack()
+    num_visited = visit_valid(problem, visited, fringe, node)
 
     # If there is no visited subnodes, node is dead-end
-    if num_visted == 0:
+    if num_visited == 0:
         return None
 
-    while not (to_check.isEmpty()):
-        current = to_check.pop()
+    while not (fringe.isEmpty()):
+        current = fringe.pop()
         if (problem.isGoal(current[0])):
             directions.push(current[1])
             return node
@@ -108,20 +103,20 @@ def breadthFirstSearch(problem):
     visited_set = set()
     parent_map = {start: None}
     directions = Stack()
-    to_check = Queue()
+    fringe = Queue()
     goal = None
     result = []
 
-    visit_valid_bfs(problem, visited_set, parent_map, to_check, start)
+    visit_valid_bfs(problem, visited_set, parent_map, fringe, start)
 
     # Form the parent tree for all nodes
-    while not(to_check.isEmpty()):
-        current = to_check.pop()
+    while not(fringe.isEmpty()):
+        current = fringe.pop()
 
         if problem.isGoal(current[0]):
             goal = current[0]
             break
-        visit_valid_bfs(problem, visited_set, parent_map, to_check, current[0])
+        visit_valid_bfs(problem, visited_set, parent_map, fringe, current[0])
 
     parent = parent_map[goal]
     while parent:
@@ -134,14 +129,58 @@ def breadthFirstSearch(problem):
 #    print("Path: %s" % (str (result)))
     return result
 
+def visit_valid_ucs(problem, visited, parent_map, storage, node, dist):
+    visited.add(node)
+    visit_count = 0
+
+    successor_states = problem.successorStates(node)
+    for s in successor_states:
+        if s[0] in visited:
+            continue
+
+        # Push onto fringe, child and total distance up until it
+        visited.add(s[0])
+        # distance is stored as part of the item
+        storage.push((s, dist + s[2]), dist + s[2])
+        visit_count += 1
+
+        # keep track of parent of s[0]
+        parent_map[s[0]] = (node, s[1])
+    return visit_count
 
 def uniformCostSearch(problem):
     """
     Search the node of least total cost first.
     """
 
-    # *** Your Code Here ***
-    raise NotImplementedError()
+    start = problem.startingState()
+    visited_set = set()
+    parent_map = {start: None}
+    directions = Stack()
+    fringe = PriorityQueue()
+    result = []
+    goal = None
+    distance = 0
+
+    visit_valid_ucs(problem, visited_set, parent_map, fringe, start, distance)
+
+    while not (fringe.isEmpty()):
+        current, distance = fringe.pop()
+
+        if problem.isGoal(current[0]):
+            goal = current[0]
+            break
+        visit_valid_ucs(problem, visited_set, parent_map, fringe, current[0], distance)
+
+    parent = parent_map[goal]
+    while parent:
+        directions.push(parent[1])
+        parent = parent_map[parent[0]]
+
+    while not (directions.isEmpty()):
+        result.append(directions.pop())
+
+    return result
 
 def aStarSearch(problem, heuristic):
     """
@@ -150,4 +189,3 @@ def aStarSearch(problem, heuristic):
 
     # *** Your Code Here ***
     raise NotImplementedError()
-
