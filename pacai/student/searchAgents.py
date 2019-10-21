@@ -9,10 +9,55 @@ import logging
 
 from pacai.core.actions import Actions
 from pacai.core.search import heuristic
+from pacai.core.directions import Directions
 from pacai.core.search.position import PositionSearchProblem
 from pacai.core.search.problem import SearchProblem
 from pacai.agents.base import BaseAgent
 from pacai.agents.search.base import SearchAgent
+from pacai.util import util
+
+
+class CornerState:
+    def __init__(self, destinationPosition, toVisit):
+        self._position = destinationPosition
+        self._visitTargets = list(toVisit)
+        if destinationPosition in toVisit:
+            self._visitTargets.remove(destinationPosition)
+
+        self._numTargets = len(self._visitTargets)
+
+        self._hash = None
+
+    def __hash__(self):
+        if (self._hash is None):
+            self._hash = util.buildHash(self._position, self._numTargets, *self._visitTargets)
+
+        return self._hash
+
+    def __list__(self):
+        return [self._position, self._visitTargets]
+
+    def __str__(self):
+        result = "{" + str(self._position) + "," + str(self._visitTargets) + "}"
+        return result
+
+    def __eq__(self, other):
+        if self._position != other._position:
+            return False
+        if self._numTargets != other._numTargets:
+            return False
+        if self._visitTargets != other._visitTargets:
+            return False
+        return True
+
+    def getAgentPosition(self):
+        return self._position
+
+    def getTargets(self):
+        return self._visitTargets
+
+    def getTargetCount(self):
+        return self._numTargets
 
 class CornersProblem(SearchProblem):
     """
@@ -28,33 +73,11 @@ class CornersProblem(SearchProblem):
     Returns the start state (in your search space,
     NOT a `pacai.core.gamestate.AbstractGameState`).
 
-    `pacai.core.search.problem.SearchProblem.isGoal`:
-    Returns whether this search state is a goal state of the problem.
-
-    `pacai.core.search.problem.SearchProblem.successorStates`:
-    Returns successor states, the actions they require, and a cost of 1.
-    The following code snippet may prove useful:
-    ```
-        successors = []
-
-        for action in Directions.CARDINAL:
-            x, y = currentPosition
-            dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
-            hitsWall = self.walls[nextx][nexty]
-
-            if (not hitsWall):
-                # Construct the successor.
-
-        return successors
-    ```
     """
-
     def __init__(self, startingGameState):
         super().__init__()
 
         self.walls = startingGameState.getWalls()
-        self.startingPosition = startingGameState.getPacmanPosition()
         top = self.walls.getHeight() - 2
         right = self.walls.getWidth() - 2
 
@@ -64,7 +87,22 @@ class CornersProblem(SearchProblem):
                 logging.warning('Warning: no food in corner ' + str(corner))
 
         # *** Your Code Here ***
-        raise NotImplementedError()
+        self.startingPosition = startingGameState.getPacmanPosition()
+        self._visitedLocations = set()
+        self._visitHistory = []
+        self._numExpanded = 0
+        self.goal = [CornerState((1, 1), ()), CornerState((1, top), ()),
+                CornerState((right, 1), ()), CornerState((right, top), ())]
+
+    def getExpandedCount(self):
+        return self._numExpanded
+
+    def getVisitHistory(self):
+        return self._visitHistory
+
+    def updateVisitHistory(self, pos):
+        self._visitedLocations.add(pos)
+        self._visitHistory.append(pos)
 
     def actionsCost(self, actions):
         """
@@ -72,7 +110,6 @@ class CornersProblem(SearchProblem):
         If those actions include an illegal move, return 999999.
         This is implemented for you.
         """
-
         if (actions is None):
             return 999999
 
@@ -84,6 +121,36 @@ class CornersProblem(SearchProblem):
                 return 999999
 
         return len(actions)
+
+    def startingState(self):
+        return CornerState(self.startingPosition, self.corners)
+
+    def successorStates(self, state):
+        currentPosition = state.getAgentPosition()
+        self._numExpanded += 1
+        self.updateVisitHistory(currentPosition)
+
+        successors = []
+
+        for action in Directions.CARDINAL:
+            x, y = currentPosition
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            hitsWall = self.walls[nextx][nexty]
+
+            if (not hitsWall):
+                dest = (nextx, nexty)
+                cState = CornerState(dest, state.getTargets())
+                successors.append((cState, action, 1))
+
+        return successors
+
+    """
+    Returns whether this search state is a goal state of the problem.
+    Goal is reached when there is no more corners to reach
+    """
+    def isGoal(self, state):
+        return state.getTargetCount() == 0
 
 def cornersHeuristic(state, problem):
     """

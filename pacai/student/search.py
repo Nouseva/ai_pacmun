@@ -236,6 +236,3 @@ def aStarSearch(problem, heuristic):
         result.append(directions.pop())
 
     return result
-
-    # *** Your Code Here ***
-    raise NotImplementedError()
