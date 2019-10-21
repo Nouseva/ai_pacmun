@@ -10,6 +10,7 @@ import logging
 from pacai.core.actions import Actions
 from pacai.core.search import heuristic
 from pacai.core.directions import Directions
+from pacai.core.distance import manhattan
 from pacai.core.search.position import PositionSearchProblem
 from pacai.core.search.problem import SearchProblem
 from pacai.agents.base import BaseAgent
@@ -49,6 +50,9 @@ class CornerState:
         if self._visitTargets != other._visitTargets:
             return False
         return True
+
+    def __lt__(self, other):
+        return self._numTargets < other._numTargets
 
     def getAgentPosition(self):
         return self._position
@@ -167,7 +171,17 @@ def cornersHeuristic(state, problem):
     # walls = problem.walls  # These are the walls of the maze, as a Grid.
 
     # *** Your Code Here ***
-    return heuristic.null(state, problem)  # Default to trivial solution
+
+    targets = state.getTargets()
+    pos = state.getAgentPosition()
+    dist = []
+
+    for t in targets:
+        dist.append(manhattan(t, pos))
+
+    if dist:
+        return min(dist)
+    return 0
 
 def foodHeuristic(state, problem):
     """
