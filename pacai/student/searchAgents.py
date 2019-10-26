@@ -10,7 +10,7 @@ import logging
 from pacai.core.actions import Actions
 from pacai.core.search import heuristic
 from pacai.core.directions import Directions
-from pacai.core.distance import manhattan
+from pacai.core import distance
 from pacai.core.search.position import PositionSearchProblem
 from pacai.core.search.problem import SearchProblem
 from pacai.agents.base import BaseAgent
@@ -177,7 +177,8 @@ def cornersHeuristic(state, problem):
     dist = []
 
     for t in targets:
-        dist.append(manhattan(t, pos))
+        dist.append(distance.manhattan(t, pos))
+        # dist.append(distance.euclidean(t, pos))
 
     if dist:
         return min(dist)
