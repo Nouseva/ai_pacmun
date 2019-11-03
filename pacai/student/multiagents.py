@@ -189,7 +189,12 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
         # Get actions for pacman, excluding the no movement option
         currentAgentActions = gameState.getLegalActions(agentIndex)
-        currentAgentActions.remove(Directions.STOP)
+        if (Directions.STOP in currentAgentActions):
+            currentAgentActions.remove(Directions.STOP)
+
+        # Pacman has no survivable moves
+        if len(currentAgentActions) == 0:
+            return (self.getEvaluationFunction()(gameState))
 
         possibleStates = [(gameState.generateSuccessor(agentIndex, action))
                 for action in currentAgentActions]
