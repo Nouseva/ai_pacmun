@@ -2,6 +2,8 @@ import random
 
 from pacai.agents.base import BaseAgent
 from pacai.agents.search.multiagent import MultiAgentSearchAgent
+from pacai.core import distance
+from pacai.core.directions import Directions
 
 class ReflexAgent(BaseAgent):
     """
@@ -48,7 +50,16 @@ class ReflexAgent(BaseAgent):
         in your evaluation function.
         """
 
+        # Values can be modified to change importance of certain elements
+        VALUE_GHOST = 2
+        VALUE_FOOD = 1
+
+        # Distance at which ghosts matter to evaluation
+        GHOST_DISTANCE = 6
+
         successorGameState = currentGameState.generatePacmanSuccessor(action)
+
+        pacman_pos_n = successorGameState.getPacmanPosition()
 
         # Useful information you can extract.
         # newPosition = successorGameState.getPacmanPosition()
@@ -56,9 +67,45 @@ class ReflexAgent(BaseAgent):
         # newGhostStates = successorGameState.getGhostStates()
         # newScaredTimes = [ghostState.getScaredTimer() for ghostState in newGhostStates]
 
-        # *** Your Code Here ***
+        new_ghost_states = successorGameState.getGhostStates()
+        new_ghost_info = [(ghost_state.getScaredTimer(), ghost_state.getPosition())
+                for ghost_state in new_ghost_states]
 
-        return successorGameState.getScore()
+        food_left_n = successorGameState.getFood().asList()
+        # Base food score is dependent on eaten food
+        if (len(food_left_n) == 0):
+            food_score = VALUE_FOOD
+        else:
+            food_dist_n = min([distance.euclidean(food, pacman_pos_n)
+                for food in food_left_n])
+
+            food_score = VALUE_FOOD / food_dist_n
+
+        ghost_score = 0
+        for ghost in new_ghost_info:
+            ghost_dist = distance.euclidean(ghost[1], pacman_pos_n)
+            # Ghost will be too far to matter
+            if (ghost_dist > GHOST_DISTANCE):
+                continue
+            # Ghost will collide with pacman
+            elif (ghost_dist == 0):
+                # Pacman has been eaten
+                if (ghost[0] == 0):
+                    return -VALUE_GHOST
+                # Pacman has eaten
+                else:
+                    ghost_score = ghost_score + VALUE_GHOST
+
+            # Ghost is in range to be wary of
+            else:
+                # Ghost is brave, try to avoid
+                if (ghost[0] == 0):
+                    ghost_score = ghost_score - (VALUE_GHOST / ghost_dist)
+                # Ghost is scared, try to eat
+                else:
+                    ghost_score = ghost_score + (VALUE_GHOST / ghost_dist)
+
+        return successorGameState.getScore() + ghost_score + food_score
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -87,8 +134,81 @@ class MinimaxAgent(MultiAgentSearchAgent):
     and `pacai.agents.search.multiagent.MultiAgentSearchAgent.getEvaluationFunction`.
     """
 
+    # kwargs: [evalFn, depth, kwargs]
     def __init__(self, index, **kwargs):
-        super().__init__(index)
+        super().__init__(index, **kwargs)
+
+    # Returns the action an agent to maximize result
+    def getAction(self, gameState):
+        # Call recursive maximizing function
+        agentAction = self.getMax(gameState, 0, 0)
+
+        # print("Found:", agentAction)
+        return agentAction
+
+    # Returns tuple of (minimal value of successorStates, action to reach state)
+    def getMin(self, gameState, agentIndex, depth):
+        # Strip the action from the state
+        if (type(gameState) == tuple):
+            gameState = gameState[0]
+        currentAgentActions = gameState.getLegalActions(agentIndex)
+
+        # Current agent has no actions available, game must have ended
+        if (len(currentAgentActions) == 0):
+            return (self.getEvaluationFunction()(gameState))
+
+        # possibleStates is tuple (gameState, action to reach gameState)
+        possibleStates = [(gameState.generateSuccessor(agentIndex, action))
+                for action in currentAgentActions]
+
+        # There is no further agents to check
+        if (depth == self.getTreeDepth()) and (agentIndex == gameState.getNumAgents() - 1):
+            # actionVals is tuple (value of state, action to reach state)
+            actionVals = [(self.getEvaluationFunction()(state))
+                    for state in possibleStates]
+            return min(actionVals)
+
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        actionVals = None
+
+        # The next agent is not pacman (not MAX)
+        if (nextAgent > 0):
+            actionVals = [self.getMin(state, nextAgent, depth)
+                    for state in possibleStates]
+        else:
+            actionVals = [self.getMax(state, nextAgent, depth + 1)
+                    for state in possibleStates]
+
+        return min(actionVals)
+
+    # Returns tuple of (maximal value of successorStates, action to reach state)
+    def getMax(self, gameState, agentIndex, depth):
+        # Strip the action from the state
+        if (type(gameState) == tuple):
+            gameState = gameState[0]
+
+        # Get actions for pacman, excluding the no movement option
+        currentAgentActions = gameState.getLegalActions(agentIndex)
+        currentAgentActions.remove(Directions.STOP)
+
+        possibleStates = [(gameState.generateSuccessor(agentIndex, action))
+                for action in currentAgentActions]
+
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+
+        if (nextAgent > 0):
+            actionVals = [self.getMin(state, nextAgent, depth)
+                    for state in possibleStates]
+
+            # If it is the first call to getMax, return the maximizing action
+            if (depth == 0):
+                return currentAgentActions[actionVals.index(max(actionVals))]
+            # Any other call, return the max value
+            else:
+                return max(actionVals)
+        else:
+            print("Error: No advasarial Agent available")
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
