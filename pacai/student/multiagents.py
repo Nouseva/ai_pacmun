@@ -1,9 +1,11 @@
 import random
 
 from pacai.agents.base import BaseAgent
+from pacai.agents.ghost.random import RandomGhost
 from pacai.agents.search.multiagent import MultiAgentSearchAgent
 from pacai.core import distance
 from pacai.core.directions import Directions
+from pacai.util import counter
 
 class ReflexAgent(BaseAgent):
     """
@@ -279,14 +281,13 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 v = valueRetrivalFunction(state, nextAgent, nextDepth, alpha, beta)
                 val = min(val, v)
                 # Value found does not exceed alpha, MAX agent will prefer alpha
-                if (val <=  alpha):
+                if (val <= alpha):
                     return (val)
                 beta = min(beta, val)
             return (val)
 
             # The preceeding agent was another ghost, so all paths must be searched
         else:
-        #TODO: handle ghost parent case
             actionVals = [valueRetrivalFunction(state, nextAgent, nextDepth, alpha, beta)
                     for state in possibleStates]
 
@@ -327,7 +328,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
             # If it is the first call to getMax, return the maximizing action
             if (depth == 0):
-
                 # print("Found action val:", val, "stateScores:", stateScores)
                 return currentAgentActions[stateScores.index(val)]
             # Any other call, return the max value
@@ -335,6 +335,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 return (val)
         else:
             print("Error: No advasarial Agent available")
+
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
     An expectimax agent.
@@ -351,6 +352,96 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
     def __init__(self, index, **kwargs):
         super().__init__(index)
+
+    # Returns the action an agent to maximize result
+    def getAction(self, gameState):
+
+        # Call recursive maximizing function, w/o pruning
+        agentAction = self.getMax(gameState, 0, 0)
+
+        # print("Found:", agentAction)
+        return agentAction
+
+
+    def getExpected(self, gameState, agentIndex, depth):
+        currentAgentActions = gameState.getLegalActions(agentIndex)
+
+        # Current agent has no actions available, game ended
+        if (len(currentAgentActions) == 0):
+            return self.getEvaluationFunction()(gameState)
+
+        # TODO: Use RandomGhost to determine distribution instead of building from scratch
+
+        stateDistribution = counter.Counter()
+        for a in currentAgentActions:
+            stateDistribution[a] = 1.0
+        stateDistribution.normalize()
+        # print(stateDistribution)
+
+        possibleStates = [(gameState.generateSuccessor(agentIndex, action))
+                for action in currentAgentActions]
+
+        if (depth == self.getTreeDepth()) and (agentIndex == gameState.getNumAgents() - 1):
+            actionVals = [(self.getEvaluationFunction()(possibleStates[i]) * stateDistribution[currentAgentActions[i]])
+                for i in range(len(possibleStates))]
+
+            # print("Depth:", depth, "Agent:", agentIndex, actionVals)
+            return (sum(actionVals))
+
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        nextDepth = None
+
+        valueRetrivalFunction = None
+        # The next agent is not pacman
+        if (nextAgent > 0):
+            nextDepth = depth
+            valueRetrivalFunction = self.getExpected
+        # The next agent is pacman (MAX)
+        else:
+            nextDepth = depth + 1
+            valueRetrivalFunction = self.getMax
+
+        # The values are multiplied by the expetation
+        actionVals = [
+                (valueRetrivalFunction(possibleStates[i], nextAgent, nextDepth) *
+                    stateDistribution[currentAgentActions[i]])
+                    for i in range(len(possibleStates))]
+
+        # Handles prev_ghost->current_ghost->some_agent transitions
+        # print("Depth:", depth, "Agent:", agentIndex, actionVals)
+        return (sum(actionVals))
+
+    # Returns either: maximizing action, or maximal value
+    def getMax(self, gameState, agentIndex, depth):
+
+        # Get actions for pacman, excluding the no movement option
+        currentAgentActions = gameState.getLegalActions(agentIndex)
+        if Directions.STOP in currentAgentActions:
+            currentAgentActions.remove(Directions.STOP)
+
+        # Pacman has no survivable moves
+        if len(currentAgentActions) == 0:
+            return (self.getEvaluationFunction()(gameState))
+
+        possibleStates = [(gameState.generateSuccessor(agentIndex, action))
+                for action in currentAgentActions]
+
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        stateScores = None
+
+        if (nextAgent > 0):
+            stateScores = [(self.getExpected(state, nextAgent, depth))
+                    for state in possibleStates]
+
+            # If it is the first call to getMax, return the maximizing action
+            if (depth == 0):
+                # print("Found action val:", val, "stateScores:", stateScores)
+                return currentAgentActions[stateScores.index(max(stateScores))]
+            # Any other call, return the max value
+            else:
+                return max(stateScores)
+        else:
+            print("Error: No advasarial Agent available")
 
 def betterEvaluationFunction(currentGameState):
     """
