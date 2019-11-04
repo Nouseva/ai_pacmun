@@ -230,6 +230,111 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     def __init__(self, index, **kwargs):
         super().__init__(index)
 
+    # Returns the action an agent to maximize result
+    def getAction(self, gameState):
+
+        # Call recursive maximizing function, w/ pruning
+        agentAction = self.getMax(gameState, 0, 0, -9999999, 9999999)
+
+        # print("Found:", agentAction)
+        return agentAction
+
+    # Returns tuple of (min val, alpha, beta)
+    def getMin(self, gameState, agentIndex, depth, alpha, beta):
+        currentAgentActions = gameState.getLegalActions(agentIndex)
+
+        # Current agent has no actions available, game must have ended
+        if (len(currentAgentActions) == 0):
+            return (self.getEvaluationFunction()(gameState))
+
+        # possibleStates is tuple (gameState, action to reach gameState)
+        possibleStates = [(gameState.generateSuccessor(agentIndex, action))
+                for action in currentAgentActions]
+
+        # There is no further agents to check
+        if (depth == self.getTreeDepth()) and (agentIndex == gameState.getNumAgents() - 1):
+            # actionVals is tuple (value of state, action to reach state)
+            actionVals = [(self.getEvaluationFunction()(state))
+                    for state in possibleStates]
+            return (min(actionVals))
+
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        nextDepth = None
+
+        val = 9999999
+        valueRetrivalFunction = None
+        # The next agent is not pacman (not MAX)
+        if (nextAgent > 0):
+            nextDepth = depth
+            valueRetrivalFunction = self.getMin
+        # The next agent is pacman (MAX)
+        else:
+            nextDepth = depth + 1
+            valueRetrivalFunction = self.getMax
+
+            # The preceeding agent was pacman
+        if ((agentIndex - 1) == 0):
+
+            for state in possibleStates:
+                v = valueRetrivalFunction(state, nextAgent, nextDepth, alpha, beta)
+                val = min(val, v)
+                # Value found does not exceed alpha, MAX agent will prefer alpha
+                if (val <=  alpha):
+                    return (val)
+                beta = min(beta, val)
+            return (val)
+
+            # The preceeding agent was another ghost, so all paths must be searched
+        else:
+        #TODO: handle ghost parent case
+            actionVals = [valueRetrivalFunction(state, nextAgent, nextDepth, alpha, beta)
+                    for state in possibleStates]
+
+        # Handles prev_ghost->current_ghost->some_agent transitions
+        # print("Depth:", depth, "Agent:", agentIndex, actionVals)
+        return (min(actionVals))
+
+    # Returns either: maximizing action, or tuple (max val, alpha, beta)
+    def getMax(self, gameState, agentIndex, depth, alpha, beta):
+
+        # Get actions for pacman, excluding the no movement option
+        currentAgentActions = gameState.getLegalActions(agentIndex)
+        if Directions.STOP in currentAgentActions:
+            currentAgentActions.remove(Directions.STOP)
+
+        # Pacman has no survivable moves
+        if len(currentAgentActions) == 0:
+            return (self.getEvaluationFunction()(gameState))
+
+        possibleStates = [(gameState.generateSuccessor(agentIndex, action))
+                for action in currentAgentActions]
+
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        stateScores = []
+
+        if (nextAgent > 0):
+            val = -9999999
+            for state in possibleStates:
+                v = self.getMin(state, nextAgent, depth, alpha, beta)
+                # print(v, alpha, beta)
+                stateScores.append(v)
+
+                val = max(val, v)
+                if (val >= beta):
+                    break
+                # if (val >= beta) return (val, alpha, beta)
+                alpha = max(alpha, val)
+
+            # If it is the first call to getMax, return the maximizing action
+            if (depth == 0):
+
+                # print("Found action val:", val, "stateScores:", stateScores)
+                return currentAgentActions[stateScores.index(val)]
+            # Any other call, return the max value
+            else:
+                return (val)
+        else:
+            print("Error: No advasarial Agent available")
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
     An expectimax agent.
