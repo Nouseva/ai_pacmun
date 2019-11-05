@@ -355,7 +355,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     """
 
     def __init__(self, index, **kwargs):
-        super().__init__(index)
+        super().__init__(index, **kwargs)
 
     # Returns the action an agent to maximize result
     def getAction(self, gameState):
@@ -462,11 +462,11 @@ def betterEvaluationFunction(currentGameState):
         return currentGameState.getScore()
 
     # Values can be modified to change importance of certain elements
-    VALUE_GHOST = 100
-    VALUE_FOOD = 20
+    VALUE_GHOST = 50
+    VALUE_FOOD = 6
 
     # Distance at which ghosts matter to evaluation
-    GHOST_DISTANCE = 4
+    GHOST_DISTANCE = 5
 
     score_food = 0
     score_ghost = 0
@@ -483,27 +483,18 @@ def betterEvaluationFunction(currentGameState):
 
     # For ghosts that appear close, calculate the actual distance to them
     for i in range(len(dist_ghost)):
-        if (dist_ghost[i] < GHOST_DISTANCE):
-            dist_ghost[i] = distancer.getDistance(state_ghost[i].getPosition(), posi_pacman)
+        # if (dist_ghost[i] < GHOST_DISTANCE):
+        dist_ghost[i] = distancer.getDistance(state_ghost[i].getPosition(), posi_pacman)
 
     for i in range(len(state_ghost)):
         # Ghost will be too far to matter
         if (dist_ghost[i] > GHOST_DISTANCE):
             continue
-        # Ghost will collide with pacman
-        elif (dist_ghost[i] == 0):
-            # Pacman has eaten
-            if (state_ghost[i].isScared()):
-                score_ghost = score_ghost + VALUE_GHOST
-            # Pacman has been eaten
-            else:
-                print("Error: Game end should have been caught")
-
         # Ghost is in range to be wary of
         else:
             # Ghost is brave, avoid
             if (state_ghost[i].isBraveGhost()):
-                score_ghost = score_ghost - (VALUE_GHOST / dist_ghost[i])
+                score_ghost = -(VALUE_GHOST / dist_ghost[i])
             # Ghost is scared
             else:
                 # Ghost will become brave before reaching, ignore
@@ -511,7 +502,7 @@ def betterEvaluationFunction(currentGameState):
                     continue
                 # Ghost will remain scared when reached if pursued
                 else:
-                    score_ghost = score_ghost + (VALUE_GHOST / dist_ghost[i])
+                    score_ghost = (VALUE_GHOST / dist_ghost[i])
 
     if (currentGameState.getNumFood() > 0):
         # Check distance to closest food
@@ -519,7 +510,6 @@ def betterEvaluationFunction(currentGameState):
         steps_food = aStarSearch(prob_food, expec_food_heuristic)
 
         score_food = VALUE_FOOD / len(steps_food)
-
     else:
         print("Error: Game has no pellets to target")
 
