@@ -1,11 +1,15 @@
 import random
 
 from pacai.agents.base import BaseAgent
-from pacai.agents.ghost.random import RandomGhost
+# from pacai.agents.ghost.random import RandomGhost
 from pacai.agents.search.multiagent import MultiAgentSearchAgent
 from pacai.core import distance
+# from pacai.core.actions import Actions
 from pacai.core.directions import Directions
-from pacai.util import counter
+from pacai.core.distanceCalculator import Distancer
+from pacai.student.search import aStarSearch
+from pacai.student import searchAgents
+from pacai.util.counter import Counter
 
 class ReflexAgent(BaseAgent):
     """
@@ -362,7 +366,6 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         # print("Found:", agentAction)
         return agentAction
 
-
     def getExpected(self, gameState, agentIndex, depth):
         currentAgentActions = gameState.getLegalActions(agentIndex)
 
@@ -371,8 +374,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             return self.getEvaluationFunction()(gameState)
 
         # TODO: Use RandomGhost to determine distribution instead of building from scratch
-
-        stateDistribution = counter.Counter()
+        stateDistribution = Counter()
         for a in currentAgentActions:
             stateDistribution[a] = 1.0
         stateDistribution.normalize()
@@ -382,7 +384,8 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 for action in currentAgentActions]
 
         if (depth == self.getTreeDepth()) and (agentIndex == gameState.getNumAgents() - 1):
-            actionVals = [(self.getEvaluationFunction()(possibleStates[i]) * stateDistribution[currentAgentActions[i]])
+            actionVals = [(self.getEvaluationFunction()(possibleStates[i])
+                * stateDistribution[currentAgentActions[i]])
                 for i in range(len(possibleStates))]
 
             # print("Depth:", depth, "Agent:", agentIndex, actionVals)
@@ -402,10 +405,9 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             valueRetrivalFunction = self.getMax
 
         # The values are multiplied by the expetation
-        actionVals = [
-                (valueRetrivalFunction(possibleStates[i], nextAgent, nextDepth) *
-                    stateDistribution[currentAgentActions[i]])
-                    for i in range(len(possibleStates))]
+        actionVals = [(valueRetrivalFunction(possibleStates[i], nextAgent, nextDepth)
+            * stateDistribution[currentAgentActions[i]])
+            for i in range(len(possibleStates))]
 
         # Handles prev_ghost->current_ghost->some_agent transitions
         # print("Depth:", depth, "Agent:", agentIndex, actionVals)
@@ -447,10 +449,93 @@ def betterEvaluationFunction(currentGameState):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable evaluation function.
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION:
+        - When state results in a completed game, the score for the state is returned
+        - Ghosts that are deemed too far are not considered for evaluation
+            - Two passes to deterimine distance:
+                - Manhattan gives rough distance from pacman
+                - Distancer is used to get the exact distance, only used when within strike range
+        - Target food is determined using a* on the AnyFoodSearchProblem
     """
+    # If game has ended, return the score and nothing else
+    if (currentGameState.isOver()):
+        return currentGameState.getScore()
 
-    return currentGameState.getScore()
+    # Values can be modified to change importance of certain elements
+    VALUE_GHOST = 100
+    VALUE_FOOD = 20
+
+    # Distance at which ghosts matter to evaluation
+    GHOST_DISTANCE = 4
+
+    score_food = 0
+    score_ghost = 0
+
+    distancer = Distancer(currentGameState.getInitialLayout())
+
+    state_pacman = currentGameState.getPacmanState()
+    state_ghost = currentGameState.getGhostStates()
+
+    posi_pacman = state_pacman.getPosition()
+    # Rough distances between pacman and ghosts
+    dist_ghost = [distance.manhattan(ghost.getPosition(), posi_pacman)
+            for ghost in state_ghost]
+
+    # For ghosts that appear close, calculate the actual distance to them
+    for i in range(len(dist_ghost)):
+        if (dist_ghost[i] < GHOST_DISTANCE):
+            dist_ghost[i] = distancer.getDistance(state_ghost[i].getPosition(), posi_pacman)
+
+    for i in range(len(state_ghost)):
+        # Ghost will be too far to matter
+        if (dist_ghost[i] > GHOST_DISTANCE):
+            continue
+        # Ghost will collide with pacman
+        elif (dist_ghost[i] == 0):
+            # Pacman has eaten
+            if (state_ghost[i].isScared()):
+                score_ghost = score_ghost + VALUE_GHOST
+            # Pacman has been eaten
+            else:
+                print("Error: Game end should have been caught")
+
+        # Ghost is in range to be wary of
+        else:
+            # Ghost is brave, avoid
+            if (state_ghost[i].isBraveGhost()):
+                score_ghost = score_ghost - (VALUE_GHOST / dist_ghost[i])
+            # Ghost is scared
+            else:
+                # Ghost will become brave before reaching, ignore
+                if (state_ghost[i].getScaredTimer() < dist_ghost[i]):
+                    continue
+                # Ghost will remain scared when reached if pursued
+                else:
+                    score_ghost = score_ghost + (VALUE_GHOST / dist_ghost[i])
+
+    if (currentGameState.getNumFood() > 0):
+        # Check distance to closest food
+        prob_food = searchAgents.AnyFoodSearchProblem(currentGameState)
+        steps_food = aStarSearch(prob_food, expec_food_heuristic)
+
+        score_food = VALUE_FOOD / len(steps_food)
+
+    else:
+        print("Error: Game has no pellets to target")
+
+    total = score_ghost + score_food + currentGameState.getScore()
+    return total
+
+def expec_food_heuristic(state, problem):
+    if (len(problem.food.asList()) == 0):
+        return 0
+
+    pellet_list = problem.food.asList()
+    dist = set()
+    for p in pellet_list:
+        dist.add(distance.manhattan(p, state))
+
+    return min(dist)
 
 class ContestAgent(MultiAgentSearchAgent):
     """
