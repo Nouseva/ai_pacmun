@@ -8,7 +8,7 @@ from pacai.core import distance
 from pacai.core.directions import Directions
 from pacai.core.distanceCalculator import Distancer
 from pacai.student.search import aStarSearch
-from pacai.student import searchAgents
+from pacai.student.searchAgents import AnyFoodSearchProblem
 from pacai.util.counter import Counter
 
 class ReflexAgent(BaseAgent):
@@ -506,7 +506,7 @@ def betterEvaluationFunction(currentGameState):
 
     if (currentGameState.getNumFood() > 0):
         # Check distance to closest food
-        prob_food = searchAgents.AnyFoodSearchProblem(currentGameState)
+        prob_food = AnyFoodSearchProblem(currentGameState)
         steps_food = aStarSearch(prob_food, expec_food_heuristic)
 
         score_food = VALUE_FOOD / len(steps_food)
