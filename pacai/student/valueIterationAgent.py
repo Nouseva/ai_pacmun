@@ -38,9 +38,17 @@ class ValueIterationAgent(ValueEstimationAgent):
         self.discountRate = discountRate
         self.iters = iters
         self.values = counter.Counter()  # A Counter is a dict with default 0
+        self.actions = counter.Counter()
 
-        # Compute the values here.
-        raise NotImplementedError()
+        # Compute the values here
+        for i in range(self.iters):
+            actions_next, values_next = self.valueUpdate(i)
+            # No actions left to take
+            if actions_next is None:
+                break
+
+            self.values = values_next
+            self.actions = actions_next
 
     def getValue(self, state):
         """
@@ -55,3 +63,59 @@ class ValueIterationAgent(ValueEstimationAgent):
         """
 
         return self.getPolicy(state)
+
+    def getPolicy(self, state):
+        action = self.actions[state]
+        if action == 0:
+            return None
+        return action
+
+    def getQValue(self, state, action):
+        m = self.mdp
+        # action_transitions[] = (next_state, probability)
+        action_transitions = m.getTransitionStatesAndProbs(state, action)
+        action_value = []
+        print("action_transitions:", action_transitions)
+        # action_value = sum(probability * (reward + (discount * prev_value)))
+        for n_state, prob in action_transitions:
+            print("State:", state,"n_state:", n_state, "Value:", self.getValue(n_state))
+            discount_val = self.discountRate * self.getValue(n_state)
+            reward = m.getReward(state, action, n_state)
+            # print(discount_val, reward, prob)
+            action_value.append(prob * (reward + discount_val))
+
+        if (len(action_value) == 0):
+            return 0
+        return sum(action_value)
+
+    # Returns an updated value dict, None if there are no possible states
+    def valueUpdate(self, depth):
+        m = self.mdp
+
+        new_values = counter.Counter()
+        new_actions = counter.Counter()
+        # Flag that there are some states possible
+        some_states = False
+        for state in m.getStates():
+            if (not some_states):
+                some_states = True
+
+            action_values = counter.Counter()
+            possible_actions = m.getPossibleActions(state)
+            print("state:", state, "Poss Actions:", possible_actions)
+            if (len(possible_actions) == 0):
+                continue
+            for action in possible_actions:
+                action_values[action] = self.getQValue(state, action)
+
+            print("Action Values:", action_values)
+            # Store the value from the maximizing action for this state
+            new_actions[state] = action_values.argMax()
+            new_values[state] = action_values[new_actions[state]]
+
+        print("Depth:", depth)
+        print("new_actions:", new_actions)
+        print("new_values:", new_values)
+        if (some_states):
+            return new_actions, new_values
+        return None, None
