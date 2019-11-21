@@ -40,7 +40,7 @@ def question3b():
     Decrease living reward to avoid safely bumping into walls
     """
 
-    answerDiscount = 0.6
+    answerDiscount = 0.4
     answerNoise = 0.3
     answerLivingReward = -0.2
 
