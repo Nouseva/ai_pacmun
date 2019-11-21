@@ -11,66 +11,79 @@ NOT_POSSIBLE = None
 
 def question2():
     """
-    [Enter a description of what you did here.]
+    By reducing the noise, the agent becomes less
+    concerned with 'falling off the bridge' so is
+    willing to cross
     """
 
     answerDiscount = 0.9
-    answerNoise = 0.2
+    answerNoise = 0
 
     return answerDiscount, answerNoise
 
 def question3a():
     """
-    [Enter a description of what you did here.]
+    Lower the noise to prefer the red path
+    Lower discount to prefer more immediate solutions
     """
 
-    answerDiscount = 0.9
-    answerNoise = 0.2
+    answerDiscount = 0.3
+    answerNoise = 0
     answerLivingReward = 0.0
 
     return answerDiscount, answerNoise, answerLivingReward
 
 def question3b():
     """
-    [Enter a description of what you did here.]
+    Increase noise to prefer green path
+    Change discount closer to zero to prefer immediate solution
+    Decrease living reward to avoid safely bumping into walls
     """
 
-    answerDiscount = 0.9
-    answerNoise = 0.2
-    answerLivingReward = 0.0
+    answerDiscount = 0.6
+    answerNoise = 0.3
+    answerLivingReward = -0.2
 
     return answerDiscount, answerNoise, answerLivingReward
 
 def question3c():
     """
-    [Enter a description of what you did here.]
+    Decrease noise to reduce concern for 'dangerous' paths
+    Decrease living reward to move swiftly to an exit
+    Leave discount close to one to prefer longer term solution
+
     """
 
     answerDiscount = 0.9
-    answerNoise = 0.2
-    answerLivingReward = 0.0
+    answerNoise = 0
+    answerLivingReward = -0.2
 
     return answerDiscount, answerNoise, answerLivingReward
 
 def question3d():
     """
-    [Enter a description of what you did here.]
+    Increase noise to prefer safer path
+    Leave discount close to one to prefer longer term solution
+    Decrease living reward to move swiftly to a terminal
     """
 
     answerDiscount = 0.9
-    answerNoise = 0.2
-    answerLivingReward = 0.0
+    answerNoise = 0.4
+    answerLivingReward = -0.1
 
     return answerDiscount, answerNoise, answerLivingReward
 
 def question3e():
     """
-    [Enter a description of what you did here.]
+    Increase living reward to positive
+    Eliminate discount by setting to one
+    Both of which cause the agent to try and survive as long as possible
+    Increase noise to move away from edge and terminal states
     """
 
-    answerDiscount = 0.9
-    answerNoise = 0.2
-    answerLivingReward = 0.0
+    answerDiscount = 1
+    answerNoise = 0.4
+    answerLivingReward = 0.3
 
     return answerDiscount, answerNoise, answerLivingReward
 
