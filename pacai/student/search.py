@@ -118,6 +118,8 @@ def breadthFirstSearch(problem):
             break
         visit_valid_bfs(problem, visited_set, parent_map, fringe, current[0])
 
+    if goal is None:
+        return result
     parent = parent_map[goal]
     while parent:
         directions.push(parent[1])

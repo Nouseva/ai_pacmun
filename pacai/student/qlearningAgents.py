@@ -86,12 +86,14 @@ class QLearningAgent(ReinforcementAgent):
 
     def getAction(self, state):
         ideal_action = self.getPolicy(state)
+        # Terminal state
+        if ideal_action is None:
+            return None
 
-        if ideal_action is not None:
-            # Check if agent randomly decides to explore
-            if probability.flipCoin(self.getEpsilon()):
-                action_list = self.getLegalActions(state)
-                return random.choice(action_list)
+        # Check if agent randomly decides to explore
+        if probability.flipCoin(self.getEpsilon()):
+            action_list = self.getLegalActions(state)
+            return random.choice(action_list)
 
         return ideal_action
 
@@ -193,6 +195,24 @@ class ApproximateQAgent(PacmanQAgent):
         self.featExtractor = reflection.qualifiedImport(extractor)
 
         # You might want to initialize weights here.
+        self.weight = counter.Counter()
+
+    def getQValue(self, state, action):
+        feat_vect = self.featExtractor.getFeatures(self, state, action)
+        return feat_vect * self.weight
+
+    def update(self, state, action, n_state, reward):
+        feat_vect = self.featExtractor.getFeatures(self, state, action)
+        n_Val_prev = self.getValue(n_state)
+
+        correction = (reward + (self.getDiscountRate() * n_Val_prev)
+                - self.getQValue(state, action))
+
+        # (f_i)/(a * correction)^-1
+        for key in feat_vect.keys():
+            feat_vect[key] = feat_vect[key] * self.getAlpha() * correction
+
+        self.weight += (feat_vect)
 
     def final(self, state):
         """
@@ -206,4 +226,4 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # You might want to print your weights here for debugging.
             # *** Your Code Here ***
-            raise NotImplementedError()
+            pass

@@ -89,13 +89,15 @@ def question3e():
 
 def question6():
     """
-    [Enter a description of what you did here.]
+    It is not possible to choose an epsilon and learning rate
+    that will result in finding the optimal policy within 50 episodes.
+    Once the closest positive exit is found, the agent will default to
+    pathing into it. For completely random movement, there is only a 1 in
+    2^10 chance of the agent successfully crossing the bridge, and to
+    build the path it would need to do it 5 times.
     """
 
-    answerEpsilon = 0.3
-    answerLearningRate = 0.5
-
-    return answerEpsilon, answerLearningRate
+    return NOT_POSSIBLE
 
 if __name__ == '__main__':
     questions = [
